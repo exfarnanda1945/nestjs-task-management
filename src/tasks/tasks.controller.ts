@@ -1,45 +1,28 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
-  Patch,
+  ParseIntPipe,
   Post,
+  ValidationPipe,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
-import { Task, TaskStatus } from './task.model';
-import { CreateTaskDto } from './dto/create-task.dto';
+import { CreateTaskDto, TaskDto } from './dto/task.dto';
 
 @Controller('tasks')
 export class TasksController {
   constructor(private tasksService: TasksService) {}
 
-  @Get()
-  getAllTask(): Task[] {
-    return this.tasksService.getAllTask();
-  }
-
-  @Post()
-  createTask(@Body() createTask: CreateTaskDto): Task {
-    return this.tasksService.createTask(createTask);
-  }
-
   @Get('/:id')
-  getTaskById(@Param('id') id: string): Task {
+  getTaskById(@Param('id', ParseIntPipe) id: number): Promise<TaskDto> {
     return this.tasksService.getTaskById(id);
   }
 
-  @Delete('/:id')
-  deleteTaskById(@Param('id') id: string) {
-    return this.tasksService.deleteTaskById(id);
-  }
-
-  @Patch('/:id/status')
-  updateTaskStatus(
-    @Param('id') id: string,
-    @Body('status') status: TaskStatus,
-  ): Task {
-    return this.tasksService.updateStatusTask(id, status);
+  @Post()
+  createTask(
+    @Body(ValidationPipe) createTask: CreateTaskDto,
+  ): Promise<TaskDto> {
+    return this.tasksService.createTask(createTask);
   }
 }

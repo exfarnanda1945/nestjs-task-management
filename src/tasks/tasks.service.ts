@@ -1,42 +1,43 @@
-import { Injectable } from '@nestjs/common';
-import { Task } from './task.model';
-import { TaskStatus } from './task.model';
-import { v4 as uuidv4 } from 'uuid';
-import { CreateTaskDto } from './dto/create-task.dto';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateTaskDto, TaskDto } from './dto/task.dto';
+import { Task } from './task.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TaskStatus } from './enum/task.status.enum';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TasksService {
-  private tasks: Task[] = [];
+  constructor(
+    @InjectRepository(Task) private taskRepository: Repository<Task>,
+  ) {}
 
-  getAllTask(): Task[] {
-    return this.tasks;
-  }
+  async getTaskById(id: number): Promise<TaskDto> {
+    const find = await this.taskRepository.findOne({ where: { id } });
 
-  createTask(createTask: CreateTaskDto): Task {
-    const task: Task = {
-      id: uuidv4(),
-      title: createTask.title,
-      description: createTask.description,
-      status: TaskStatus.OPEN,
+    if (!find) {
+      throw new NotFoundException(`Task with "${id}" not found`);
+    }
+
+    const task: TaskDto = {
+      id: find.id,
+      description: find.description,
+      status: find.status,
+      title: find.title,
     };
-
-    this.tasks.push(task);
 
     return task;
   }
 
-  getTaskById(id: string): Task {
-    return this.tasks.find((task) => task.id === id);
-  }
+  async createTask(createTask: CreateTaskDto): Promise<TaskDto> {
+    const { title, description } = createTask;
+    const task = new Task();
+    task.title = title;
+    task.description = description;
+    task.status = TaskStatus.OPEN;
 
-  deleteTaskById(id: string) {
-    const index = this.tasks.findIndex((task) => task.id === id);
-    this.tasks.splice(index, 1);
-  }
+    await task.save();
 
-  updateStatusTask(id: string, status: TaskStatus): Task {
-    const task: Task = this.getTaskById(id);
-    task.status = status;
     return task;
   }
 }
